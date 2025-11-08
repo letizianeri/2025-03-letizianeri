@@ -1,41 +1,20 @@
 let data;
 let volcanoes = [];
 let categories = [];
-
+let groupedVolcanoes;
 let statusColors;
+let hoverDiv; // <-- nuovo div HTML per info hover
 
 function preload() {
   data = loadTable("assets/volcanoes.csv", "csv", "header");
-  console.log("CSV caricato:", data);
 }
 
 function setup() {
-  // --- calcolo altezza dinamica del canvas ---
-  let cols = 15;
-  let rowHeight = 50; // distanza verticale tra righe di vulcani
-  let spacingY = 60;  // distanza tra categorie
-  let totalRows = 0;
-
-  // conta righe necessarie per ciascuna categoria
-  let tempGrouped = {};
-  for (let i = 0; i < data.getRowCount(); i++) {
-    let cat = data.getString(i, "TypeCategory");
-    if (!tempGrouped[cat]) tempGrouped[cat] = 0;
-    tempGrouped[cat]++;
-  }
-
-  for (let cat in tempGrouped) {
-    let rowsInCategory = Math.ceil(tempGrouped[cat] / cols);
-    totalRows += rowsInCategory;
-  }
-
-  let canvasHeight = 150 + totalRows * rowHeight + Object.keys(tempGrouped).length * spacingY;
-
-  createCanvas(windowWidth, canvasHeight);
+  createCanvas(windowWidth, windowHeight);
   textFont("sans-serif");
   noStroke();
 
-  // --- definizione colori dopo createCanvas ---
+  // Definizione colori STATUS
   statusColors = {
     "Holocene": color(255, 140, 0),
     "Holocene?": color(255, 180, 50),
@@ -61,7 +40,23 @@ function setup() {
     "Varve Count": color(255, 100, 100)
   };
 
-  // --- leggi dati dal CSV ---
+  // Crea il div hover sopra al canvas
+  hoverDiv = createDiv('');
+  hoverDiv.style('position', 'fixed');  // fisso sulla finestra
+  hoverDiv.style('bottom', '60px');    // 100px dal basso
+  hoverDiv.style('left', '50%');        // centrato orizzontalmente
+  hoverDiv.style('transform', 'translateX(-50%)');
+  hoverDiv.style('padding', '10px');
+  hoverDiv.style('background', 'rgba(255,255,255,0.95)');
+  hoverDiv.style('color', 'black');
+  hoverDiv.style('border-radius', '8px');
+  hoverDiv.style('box-shadow', '0 4px 10px rgba(0,0,0,0.3)');
+  hoverDiv.style('font-family', 'sans-serif');
+  hoverDiv.style('text-align', 'center');
+  hoverDiv.style('display', 'none');    // nascosto di default
+  hoverDiv.style('z-index', '1000');
+
+  // Leggi dati
   for (let i = 0; i < data.getRowCount(); i++) {
     let name = data.getString(i, "Volcano Name");
     let country = data.getString(i, "Country");
@@ -71,33 +66,40 @@ function setup() {
     let eruption = data.getString(i, "Last Known Eruption");
 
     if (!categories.includes(category)) categories.push(category);
-
     volcanoes.push({ name, country, elevation, category, status, eruption });
   }
 
-  // --- posizioni con margini uguali a sinistra e a destra ---
-  let margin = 150;
-  let topMargin = 100;
-  let spacingX = (width - 2 * margin) / (cols + 1);
-  let rowSpacing = spacingX / 2; // margine verticale pari alla metà del margine orizzontale
-
-  // raggruppa per categoria
-  let grouped = {};
+  // Raggruppa per categoria
+  groupedVolcanoes = {};
   for (let v of volcanoes) {
-    if (!grouped[v.category]) grouped[v.category] = [];
-    grouped[v.category].push(v);
+    if (!groupedVolcanoes[v.category]) groupedVolcanoes[v.category] = [];
+    groupedVolcanoes[v.category].push(v);
   }
 
-  // assegna posizioni
-  for (let r = 0; r < categories.length; r++) {
-    let cat = categories[r];
-    let list = grouped[cat];
+  // Layout dinamico
+  let cols = 15;
+  let marginLeft = 150;
+  let marginRight = 200;
+  let spacingX = (width - marginLeft - marginRight) / cols;
+  let spacingY = spacingX / 1.5;
+  let currentY = 100;
+
+  for (let cat of categories) {
+    let list = groupedVolcanoes[cat];
+    let rowsNeeded = ceil(list.length / cols);
+    groupedVolcanoes[cat].firstRowY = currentY;
+
     for (let j = 0; j < list.length; j++) {
-      let rowInCategory = Math.floor(j / cols);
-      list[j].x = margin + (j % cols) * spacingX;
-      list[j].y = topMargin + r * spacingY + rowInCategory * rowSpacing;
+      let colIndex = j % cols;
+      let rowIndex = floor(j / cols);
+      list[j].x = marginLeft + colIndex * spacingX;
+      list[j].y = currentY + rowIndex * spacingY;
     }
+
+    currentY += rowsNeeded * spacingY + 40;
   }
+
+  resizeCanvas(windowWidth, max(currentY + 100, windowHeight));
 }
 
 function drawLegend() {
@@ -114,9 +116,9 @@ function drawLegend() {
   let i = 0;
   for (let status in statusColors) {
     fill(statusColors[status]);
-    ellipse(legendX + boxSize / 2, legendY + i * spacing + boxSize / 2, boxSize, boxSize);
+    ellipse(legendX + boxSize/2, legendY + i * spacing + boxSize/2, boxSize, boxSize);
     fill(255);
-    text(status, legendX + boxSize + 10, legendY + i * spacing + boxSize / 2);
+    text(status, legendX + boxSize + 10, legendY + i * spacing + boxSize/2);
     i++;
   }
 }
@@ -124,35 +126,32 @@ function drawLegend() {
 function draw() {
   background(20);
 
-  // titolo centrato correttamente
-  textAlign(CENTER, BASELINE);
+  // Titolo
   fill(255);
   textSize(24);
+  textAlign(CENTER, CENTER);
   text("Atlante Tipologico dei Vulcani del Mondo", width / 2, 40);
 
-  // legenda testuale in basso
+  // Legenda testuale in basso
   textSize(12);
   textAlign(LEFT);
   fill(200);
   text("Colore = Stato  •  Dimensione = Altezza (m)", 20, height - 50);
-  textAlign(CENTER);
 
-  // categorie a sinistra
+  // Nomi categorie
   textSize(14);
-  textAlign(LEFT);
   fill(180);
-  for (let i = 0; i < categories.length; i++) {
-    let y = 100 + i * 60; // allineato con spacingY
-    text(categories[i], 20, y);
+  for (let cat of categories) {
+    let y = groupedVolcanoes[cat].firstRowY;
+    text(cat, 20, y);
   }
-  textAlign(CENTER);
 
   let hovered = null;
 
-  // disegna vulcani
+  // Disegna vulcani con colori
   for (let v of volcanoes) {
-    let size = map(v.elevation, 0, 6000, 4, 25);
-    size = constrain(size, 4, 25);
+    let size = map(v.elevation, 0, 6000, 6, 30);
+    size = constrain(size, 5, 40);
 
     let c = statusColors[v.status] || color(150);
     fill(c);
@@ -161,21 +160,13 @@ function draw() {
     if (dist(mouseX, mouseY, v.x, v.y) < size / 2) hovered = v;
   }
 
-  // disegna legenda
   drawLegend();
 
-  // info su hover
+  // Aggiorna il div hover
   if (hovered) {
-    fill(255, 245);
-    rectMode(CENTER);
-    rect(width / 2, height - 80, 520, 70, 8);
-    fill(0);
-    textSize(13);
-    textAlign(CENTER, CENTER);
-    text(
-      `${hovered.name} — ${hovered.country}\n${hovered.category} · ${hovered.status} · Elev. ${hovered.elevation} m · Ultima eruzione: ${hovered.eruption}`,
-      width / 2,
-      height - 80
-    );
+    hoverDiv.html(`${hovered.name} — ${hovered.country}<br>${hovered.category} · ${hovered.status} · Elev. ${hovered.elevation} m · Ultima eruzione: ${hovered.eruption}`);
+    hoverDiv.show();
+  } else {
+    hoverDiv.hide();
   }
 }
