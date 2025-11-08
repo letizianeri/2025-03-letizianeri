@@ -3,7 +3,7 @@ let volcanoes = [];
 let categories = [];
 let groupedVolcanoes;
 let statusColors;
-let hoverDiv; // <-- nuovo div HTML per info hover
+let hoverDiv;
 
 function preload() {
   data = loadTable("assets/volcanoes.csv", "csv", "header");
@@ -14,7 +14,7 @@ function setup() {
   textFont("sans-serif");
   noStroke();
 
-  // Definizione colori STATUS
+  //colori per status
   statusColors = {
     "Holocene": color(255, 140, 0),
     "Holocene?": color(255, 180, 50),
@@ -40,11 +40,11 @@ function setup() {
     "Varve Count": color(255, 100, 100)
   };
 
-  // Crea il div hover sopra al canvas
+  //div hover
   hoverDiv = createDiv('');
-  hoverDiv.style('position', 'fixed');  // fisso sulla finestra
-  hoverDiv.style('bottom', '60px');    // 100px dal basso
-  hoverDiv.style('left', '50%');        // centrato orizzontalmente
+  hoverDiv.style('position', 'fixed'); //fisso sulla finestra
+  hoverDiv.style('bottom', '60px'); //60px dal basso
+  hoverDiv.style('left', '50%'); //centrato orizzontalmente
   hoverDiv.style('transform', 'translateX(-50%)');
   hoverDiv.style('padding', '10px');
   hoverDiv.style('background', 'rgba(255,255,255,0.95)');
@@ -53,10 +53,10 @@ function setup() {
   hoverDiv.style('box-shadow', '0 4px 10px rgba(0,0,0,0.3)');
   hoverDiv.style('font-family', 'sans-serif');
   hoverDiv.style('text-align', 'center');
-  hoverDiv.style('display', 'none');    // nascosto di default
+  hoverDiv.style('display', 'none');    //nascosto di default
   hoverDiv.style('z-index', '1000');
 
-  // Leggi dati
+  //ciclo che estrae i dati
   for (let i = 0; i < data.getRowCount(); i++) {
     let name = data.getString(i, "Volcano Name");
     let country = data.getString(i, "Country");
@@ -69,14 +69,14 @@ function setup() {
     volcanoes.push({ name, country, elevation, category, status, eruption });
   }
 
-  // Raggruppa per categoria
+  //raggruppa per categoria
   groupedVolcanoes = {};
   for (let v of volcanoes) {
     if (!groupedVolcanoes[v.category]) groupedVolcanoes[v.category] = [];
     groupedVolcanoes[v.category].push(v);
   }
 
-  // Layout dinamico
+  //layout
   let cols = 15;
   let marginLeft = 150;
   let marginRight = 200;
@@ -126,19 +126,19 @@ function drawLegend() {
 function draw() {
   background(20);
 
-  // Titolo
+  //titolo
   fill(255);
   textSize(24);
   textAlign(CENTER, CENTER);
   text("Atlante Tipologico dei Vulcani del Mondo", width / 2, 40);
 
-  // Legenda testuale in basso
+  //legenda in basso
   textSize(12);
   textAlign(LEFT);
   fill(200);
   text("Colore = Stato  •  Dimensione = Altezza (m)", 20, height - 50);
 
-  // Nomi categorie
+  //nomi categorie
   textSize(14);
   fill(180);
   for (let cat of categories) {
@@ -148,7 +148,7 @@ function draw() {
 
   let hovered = null;
 
-  // Disegna vulcani con colori
+  //disegna vulcani con colori
   for (let v of volcanoes) {
     let size = map(v.elevation, 0, 6000, 6, 30);
     size = constrain(size, 5, 40);
@@ -162,7 +162,7 @@ function draw() {
 
   drawLegend();
 
-  // Aggiorna il div hover
+  //aggiorna il div hover
   if (hovered) {
     hoverDiv.html(`${hovered.name} — ${hovered.country}<br>${hovered.category} · ${hovered.status} · Elev. ${hovered.elevation} m · Ultima eruzione: ${hovered.eruption}`);
     hoverDiv.show();
